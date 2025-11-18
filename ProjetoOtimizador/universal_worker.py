@@ -16,10 +16,10 @@ def log_debug(msg):
     clean_msg = msg.encode('ascii', 'ignore').decode('ascii')
     print(f"DEBUG: {clean_msg}", file=sys.stdout, flush=True)
 
-# ⭐️ ATUALIZAÇÃO DO ARGPARSE: Adiciona 'simplex' e 'battle' completo
+# ⭐️ ATUALIZAÇÃO DO ARGPARSE: Adiciona 'combined' (NOVO)
 parser = argparse.ArgumentParser()
 parser.add_argument("--exe", required=True)
-parser.add_argument("--method", choices=["pso", "ga", "simplex", "battle"], default="pso")
+parser.add_argument("--method", choices=["pso", "ga", "simplex", "battle", "combined"], default="pso")
 parser.add_argument("--dim", type=int, default=9)
 parser.add_argument("--pop", type=int, default=20)
 parser.add_argument("--iter", type=int, default=50)
@@ -123,7 +123,7 @@ def run_ga_step(population):
         
     return np.array(new_pop), best_ind, min_fit, np.mean(fitnesses)
 
-# ⭐️ NOVO ALGORITMO: SIMPLEX DE NELDER-MEAD
+# ⭐️ SIMPLEX DE NELDER-MEAD (EXISTENTE)
 def run_simplex_step(simplex_points):
     # Simplex é um conjunto de N+1 pontos, onde N é args.dim
     
@@ -138,7 +138,6 @@ def run_simplex_step(simplex_points):
     
     # Se o melhor valor for infinito, ou primeira iteração, retorna inalterado
     if f_low == float('inf'):
-        # Usamos o primeiro ponto para evitar erros no centroid
         return simplex_points, float('inf'), float('inf') 
 
     # 3. Calcula o centroide (exceto o pior ponto)
@@ -151,7 +150,6 @@ def run_simplex_step(simplex_points):
 
     # Verifica se a reflexão é melhor que o penúltimo, mas não o melhor
     if f_low <= f_reflect < fitnesses[-2][1]: 
-        # Substitui o pior ponto pelo ponto refletido
         new_simplex = [p for p, f in fitnesses[:-1]] + [p_reflect]
         return np.array(new_simplex), f_low, np.mean([f for p, f in fitnesses])
 
@@ -195,18 +193,19 @@ def run_simplex_step(simplex_points):
 
 
 def main():
-    # Setup Inicial (PSO e GA)
+    # Setup Inicial PSO
     pso_parts = np.random.randint(1, 100, (args.pop, args.dim))
     pso_vel = np.zeros_like(pso_parts)
     pso_pbest = pso_parts.copy()
     pso_pbest_val = [float('inf')] * args.pop
-    pso_gbest = pso_parts[0]
+    pso_gbest = pso_parts[0].copy()
     pso_gbest_val = float('inf')
 
+    # Setup GA
     ga_pop = np.random.randint(1, 100, (args.pop, args.dim))
     ga_best_val = float('inf')
     
-    # ⭐️ Setup Simplex (N+1 pontos)
+    # Setup Simplex
     simplex_pop = np.random.randint(1, 100, (args.dim + 1, args.dim))
     simplex_best_val = float('inf')
 
@@ -215,35 +214,88 @@ def main():
     for i in range(args.iter):
         data_out = {"iteracao": i + 1}
         
-        # Executa PSO
-        if args.method in ["pso", "battle"]:
+        # ----------------------------------------------------------------------
+        # MODO COMBINED (PSO -> SIMPLEX)
+        # ----------------------------------------------------------------------
+        if args.method == "combined":
+            
+            # 1. Passo PSO (Exploração Global)
             pso_parts, pso_vel, pso_pbest, pso_pbest_val, pso_gbest, pso_gbest_val, pso_mean = \
                 run_pso_step(pso_parts, pso_vel, pso_pbest, pso_pbest_val, pso_gbest, pso_gbest_val)
             
-            real_best = pso_gbest_val if args.goal == "min" else -pso_gbest_val
-            data_out["pso_best"] = real_best if real_best != float('inf') else 0
+            # 2. Inicializa/Ajusta Simplex em torno do GBest do PSO
+            # Se o PSO encontrou um GBest melhor que o melhor Simplex até agora, ajustamos o Simplex.
+            if i == 0 or pso_gbest_val < simplex_best_val: 
+                log_debug(f"Iteracao {i+1}: Reset Simplex no GBest do PSO ({pso_gbest_val:.4f})")
+                
+                simplex_start_point = pso_gbest.copy()
+                simplex_pop = [simplex_start_point]
+                
+                # Cria N pontos perturbados localmente (para que o Simplex tenha onde refinar)
+                for _ in range(args.dim):
+                    perturb = np.random.uniform(-2, 2, args.dim) # Pequena perturbação
+                    new_point = simplex_start_point + perturb
+                    simplex_pop.append(np.clip(np.round(new_point), 1, 100))
 
-        # Executa GA
-        if args.method in ["ga", "battle"]:
-            ga_pop, ga_best_ind, ga_iter_best, ga_mean = run_ga_step(ga_pop)
-            if ga_iter_best < ga_best_val:
-                ga_best_val = ga_iter_best
+                simplex_pop = np.array(simplex_pop)
+                # O Simplex agora trabalha em torno do novo gbest
+                simplex_best_val = pso_gbest_val 
             
-            real_best_ga = ga_best_val if args.goal == "min" else -ga_best_val
-            data_out["ga_best"] = real_best_ga if real_best_ga != float('inf') else 0
-
-        # ⭐️ Executa Simplex
-        if args.method in ["simplex", "battle"]:
+            # 3. Passo Simplex (Refinamento Local)
             simplex_pop, simplex_iter_best, simplex_mean = run_simplex_step(simplex_pop)
             
             if simplex_iter_best < simplex_best_val:
                 simplex_best_val = simplex_iter_best
-            
-            real_best_simplex = simplex_best_val if args.goal == "min" else -simplex_best_val
-            data_out["simplex_best"] = real_best_simplex if real_best_simplex != float('inf') else 0
 
-        # Imprime JSON
-        print(json.dumps(data_out), flush=True)
+            # 4. Saída: Apenas o resultado final do Simplex (após refinamento) é reportado
+            # O valor final é sempre o Simplex best
+            real_best_combined = simplex_best_val if args.goal == "min" else -simplex_best_val
+            
+            # Reporta o resultado Combinado nos campos PSO e SIMPLEX (para o gráfico)
+            data_out["simplex_best"] = real_best_combined if real_best_combined != float('inf') else 0
+            data_out["pso_best"] = data_out["simplex_best"] 
+            data_out["ga_best"] = None # Não usado no modo combinado
+            
+            # Imprime o resultado final da iteração COMBINED
+            print(json.dumps(data_out), flush=True)
+
+        # ----------------------------------------------------------------------
+        # OUTROS MODOS (EXISTENTES)
+        # ----------------------------------------------------------------------
+        else: # pso, ga, simplex, battle
+            
+            if args.method in ["pso", "battle"]:
+                pso_parts, pso_vel, pso_pbest, pso_pbest_val, pso_gbest, pso_gbest_val, pso_mean = \
+                    run_pso_step(pso_parts, pso_vel, pso_pbest, pso_pbest_val, pso_gbest, pso_gbest_val)
+                
+                real_best = pso_gbest_val if args.goal == "min" else -pso_gbest_val
+                data_out["pso_best"] = real_best if real_best != float('inf') else 0
+            else:
+                data_out["pso_best"] = None
+
+            if args.method in ["ga", "battle"]:
+                ga_pop, ga_best_ind, ga_iter_best, ga_mean = run_ga_step(ga_pop)
+                if ga_iter_best < ga_best_val:
+                    ga_best_val = ga_iter_best
+                
+                real_best_ga = ga_best_val if args.goal == "min" else -ga_best_val
+                data_out["ga_best"] = real_best_ga if real_best_ga != float('inf') else 0
+            else:
+                data_out["ga_best"] = None
+
+            if args.method in ["simplex", "battle"]:
+                simplex_pop, simplex_iter_best, simplex_mean = run_simplex_step(simplex_pop)
+                
+                if simplex_iter_best < simplex_best_val:
+                    simplex_best_val = simplex_iter_best
+                
+                real_best_simplex = simplex_best_val if args.goal == "min" else -simplex_best_val
+                data_out["simplex_best"] = real_best_simplex if real_best_simplex != float('inf') else 0
+            else:
+                data_out["simplex_best"] = None
+
+            # Imprime JSON
+            print(json.dumps(data_out), flush=True)
 
     log_debug("Finalizado com sucesso.")
 
