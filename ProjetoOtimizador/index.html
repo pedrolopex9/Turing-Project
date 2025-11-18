@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Arena de Otimização v2.0</title>
+    <title>Arena de Otimização v2.1 (Simplex)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* Estilo Dark Mode Profissional */
@@ -26,6 +26,7 @@
         .stat-val { font-size: 1.5em; font-weight: bold; }
         .pso-color { color: #ff6b6b; }
         .ga-color { color: #4facfe; }
+        .simplex-color { color: #50fa7b; } /* ⭐️ NOVO: Cor Simplex (Verde-Claro) */
     </style>
 </head>
 <body>
@@ -41,8 +42,7 @@
         <select id="method">
             <option value="pso">🚀 Apenas PSO (Enxame)</option>
             <option value="ga">🧬 Apenas Genético (Evolução)</option>
-            <option value="battle">⚔️ BATALHA (PSO vs GA)</option>
-        </select>
+            <option value="simplex">🔺 Apenas Simplex (Nelder-Mead)</option> <option value="battle">⚔️ BATALHA (PSO vs GA vs Simplex)</option> </select>
         
         <label>Objetivo</label>
         <select id="goal">
@@ -69,6 +69,9 @@
                 <div>Melhor GA</div>
                 <div class="stat-val" id="gaDisplay">---</div>
             </div>
+             <div class="stat-card simplex-color"> <div>Melhor Simplex</div>
+                <div class="stat-val" id="simplexDisplay">---</div>
+            </div>
         </div>
         
         <div style="flex-grow: 1; position: relative;">
@@ -87,6 +90,7 @@
             data: {
                 labels: [],
                 datasets: [
+                    // Dataset 0: PSO (existente)
                     {
                         label: 'Melhor PSO (Enxame)',
                         borderColor: '#ff6b6b', // Vermelho
@@ -95,10 +99,20 @@
                         borderWidth: 2,
                         tension: 0.3
                     },
+                    // Dataset 1: GA (existente)
                     {
                         label: 'Melhor Genético (Evolução)',
                         borderColor: '#4facfe', // Azul
                         backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        data: [],
+                        borderWidth: 2,
+                        tension: 0.3
+                    },
+                    // ⭐️ Dataset 2: SIMPLEX (NOVO)
+                    {
+                        label: 'Melhor Simplex (Nelder-Mead)',
+                        borderColor: '#50fa7b', // Verde-Claro
+                        backgroundColor: 'rgba(80, 250, 123, 0.1)',
                         data: [],
                         borderWidth: 2,
                         tension: 0.3
@@ -124,6 +138,12 @@
         chart.data.labels = [];
         chart.data.datasets[0].data = [];
         chart.data.datasets[1].data = [];
+        chart.data.datasets[2].data = []; // ⭐️ NOVO: Reset Simplex
+        
+        document.getElementById('psoDisplay').innerText = '---';
+        document.getElementById('gaDisplay').innerText = '---';
+        document.getElementById('simplexDisplay').innerText = '---';
+
         chart.update();
         logDiv.innerHTML = "Iniciando conexão com o núcleo...<br>";
 
@@ -180,8 +200,15 @@
             chart.data.datasets[1].data.push(null);
         }
 
+        // ⭐️ Atualiza Simplex (Dataset 2)
+        if (data.simplex_best !== undefined) {
+            chart.data.datasets[2].data.push(data.simplex_best);
+            document.getElementById('simplexDisplay').innerText = data.simplex_best.toFixed(4);
+        } else {
+            chart.data.datasets[2].data.push(null);
+        }
+
         chart.update();
     }
 </script>
 </body>
-</html>
