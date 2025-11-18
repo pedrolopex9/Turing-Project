@@ -1,0 +1,55 @@
+>>> [JAVA] INICIANDO: BATTLE -> modelo10.exe
+[PYTHON]: DEBUG: Executavel encontrado: modelo10.exe
+[PYTHON]: DEBUG: Config: battle, Dim: 9
+[PYTHON]: DEBUG: Iniciando loop principal...
+[PYTHON]: {"iteracao": 1, "pso_best": 376.97, "ga_best": 518.62}
+[PYTHON]: {"iteracao": 2, "pso_best": 443.13, "ga_best": 725.17}
+[PYTHON]: {"iteracao": 3, "pso_best": 596.15, "ga_best": 725.17}
+[PYTHON]: {"iteracao": 4, "pso_best": 702.29, "ga_best": 735.31}
+[PYTHON]: {"iteracao": 5, "pso_best": 702.29, "ga_best": 745.02}
+[PYTHON]: {"iteracao": 6, "pso_best": 714.69, "ga_best": 745.02}
+[PYTHON]: {"iteracao": 7, "pso_best": 741.89, "ga_best": 756.64}
+[PYTHON]: {"iteracao": 8, "pso_best": 770.53, "ga_best": 773.7}
+[PYTHON]: {"iteracao": 9, "pso_best": 811.39, "ga_best": 782.56}
+[PYTHON]: {"iteracao": 10, "pso_best": 870.07, "ga_best": 789.42}
+[PYTHON]: {"iteracao": 11, "pso_best": 946.7, "ga_best": 794.3}
+[PYTHON]: {"iteracao": 12, "pso_best": 957.32, "ga_best": 829.13}
+[PYTHON]: {"iteracao": 13, "pso_best": 957.73, "ga_best": 829.13}
+[PYTHON]: {"iteracao": 14, "pso_best": 957.73, "ga_best": 836.87}
+[PYTHON]: {"iteracao": 15, "pso_best": 957.92, "ga_best": 836.87}
+[PYTHON]: {"iteracao": 16, "pso_best": 957.92, "ga_best": 840.95}
+[PYTHON]: {"iteracao": 17, "pso_best": 957.92, "ga_best": 840.95}
+[PYTHON]: {"iteracao": 18, "pso_best": 957.92, "ga_best": 840.95}
+[PYTHON]: {"iteracao": 19, "pso_best": 957.92, "ga_best": 876.39}
+[PYTHON]: {"iteracao": 20, "pso_best": 957.92, "ga_best": 876.39}
+[PYTHON]: {"iteracao": 21, "pso_best": 957.92, "ga_best": 876.39}
+[PYTHON]: {"iteracao": 22, "pso_best": 957.92, "ga_best": 876.39}
+[PYTHON]: {"iteracao": 23, "pso_best": 957.92, "ga_best": 876.39}
+[PYTHON]: {"iteracao": 24, "pso_best": 957.92, "ga_best": 876.39}
+[PYTHON]: {"iteracao": 25, "pso_best": 957.92, "ga_best": 876.39}
+[PYTHON]: {"iteracao": 26, "pso_best": 957.92, "ga_best": 876.39}
+[PYTHON]: {"iteracao": 27, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 28, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 29, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 30, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 31, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 32, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 33, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 34, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 35, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 36, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 37, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 38, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 39, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 40, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 41, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 42, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 43, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 44, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 45, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 46, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 47, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 48, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 49, "pso_best": 957.92, "ga_best": 884.12}
+[PYTHON]: {"iteracao": 50, "pso_best": 957.92, "ga_best": 897.74}
+[PYTHON]: DEBUG: Finalizado com sucesso.
