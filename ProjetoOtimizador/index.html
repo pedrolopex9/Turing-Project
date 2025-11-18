@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Arena de Otimização v2.1 (Simplex)</title>
+    <title>Arena de Otimização v2.2 (Combinada)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* Estilo Dark Mode Profissional */
@@ -26,7 +26,9 @@
         .stat-val { font-size: 1.5em; font-weight: bold; }
         .pso-color { color: #ff6b6b; }
         .ga-color { color: #4facfe; }
-        .simplex-color { color: #50fa7b; } /* ⭐️ NOVO: Cor Simplex (Verde-Claro) */
+        .simplex-color { color: #50fa7b; } 
+        .combined-color { color: #ffeb3b; } /* ⭐️ Cor para o resultado combinado */
+        .hidden { display: none !important; } /* Classe para esconder */
     </style>
 </head>
 <body>
@@ -39,10 +41,13 @@
         <input type="text" id="exePath" value="modelo10.exe">
         
         <label>Estratégia de Busca</label>
-        <select id="method">
+        <select id="method" onchange="toggleStatCards()"> 
             <option value="pso">🚀 Apenas PSO (Enxame)</option>
             <option value="ga">🧬 Apenas Genético (Evolução)</option>
-            <option value="simplex">🔺 Apenas Simplex (Nelder-Mead)</option> <option value="battle">⚔️ BATALHA (PSO vs GA vs Simplex)</option> </select>
+            <option value="simplex">🔺 Apenas Simplex (Nelder-Mead)</option>
+            <option value="battle">⚔️ BATALHA (PSO vs GA vs Simplex)</option>
+            <option value="combined">🎯 COMBINADA (PSO -> Simplex / Iteração)</option> 
+        </select>
         
         <label>Objetivo</label>
         <select id="goal">
@@ -61,16 +66,23 @@
                 <div>Iteração</div>
                 <div class="stat-val" id="iterDisplay">0</div>
             </div>
-            <div class="stat-card pso-color">
+            
+            <div class="stat-card pso-color" id="psoCard">
                 <div>Melhor PSO</div>
                 <div class="stat-val" id="psoDisplay">---</div>
             </div>
-            <div class="stat-card ga-color">
+            <div class="stat-card ga-color" id="gaCard">
                 <div>Melhor GA</div>
                 <div class="stat-val" id="gaDisplay">---</div>
             </div>
-             <div class="stat-card simplex-color"> <div>Melhor Simplex</div>
+             <div class="stat-card simplex-color" id="simplexCard"> 
+                <div>Melhor Simplex</div>
                 <div class="stat-val" id="simplexDisplay">---</div>
+            </div>
+
+            <div class="stat-card combined-color hidden" id="combinedCard">
+                <div>Melhor COMBINADO</div>
+                <div class="stat-val" id="combinedDisplay">---</div>
             </div>
         </div>
         
@@ -83,6 +95,38 @@
 <script>
     let chart;
 
+    function toggleStatCards() {
+        const method = document.getElementById('method').value;
+        const isCombined = method === 'combined';
+
+        // 1. Visibilidade dos Cartões
+        document.getElementById('psoCard').classList.toggle('hidden', isCombined);
+        document.getElementById('gaCard').classList.toggle('hidden', isCombined);
+        document.getElementById('simplexCard').classList.toggle('hidden', isCombined);
+        document.getElementById('combinedCard').classList.toggle('hidden', !isCombined);
+
+        // 2. Aparência do Gráfico
+        if (chart && chart.data && chart.data.datasets.length >= 3) {
+            
+            chart.data.datasets[0].label = 'Melhor PSO (Enxame)';
+            chart.data.datasets[0].borderColor = '#ff6b6b'; 
+            
+            if (isCombined) {
+                // Modo COMBINADA: Dataset 0 assume o papel da Combinada e esconde os outros
+                chart.data.datasets[0].label = 'Resultado Combinado (PSO->Simplex)';
+                chart.data.datasets[0].borderColor = '#ffeb3b'; // Usa a cor combinada
+                
+                chart.data.datasets[1].hidden = true; // Esconde GA
+                chart.data.datasets[2].hidden = true; // Esconde Simplex
+            } else {
+                // Outros Modos: Todos os datasets voltam a ser visíveis
+                chart.data.datasets[1].hidden = false;
+                chart.data.datasets[2].hidden = false;
+            }
+            chart.update();
+        }
+    }
+
     window.onload = function() {
         const ctx = document.getElementById('optChart').getContext('2d');
         chart = new Chart(ctx, {
@@ -90,28 +134,28 @@
             data: {
                 labels: [],
                 datasets: [
-                    // Dataset 0: PSO (existente)
+                    // Dataset 0: PSO / COMBINADO
                     {
                         label: 'Melhor PSO (Enxame)',
-                        borderColor: '#ff6b6b', // Vermelho
+                        borderColor: '#ff6b6b', 
                         backgroundColor: 'rgba(255, 107, 107, 0.1)',
                         data: [],
                         borderWidth: 2,
                         tension: 0.3
                     },
-                    // Dataset 1: GA (existente)
+                    // Dataset 1: GA
                     {
                         label: 'Melhor Genético (Evolução)',
-                        borderColor: '#4facfe', // Azul
+                        borderColor: '#4facfe', 
                         backgroundColor: 'rgba(79, 172, 254, 0.1)',
                         data: [],
                         borderWidth: 2,
                         tension: 0.3
                     },
-                    // ⭐️ Dataset 2: SIMPLEX (NOVO)
+                    // Dataset 2: SIMPLEX
                     {
                         label: 'Melhor Simplex (Nelder-Mead)',
-                        borderColor: '#50fa7b', // Verde-Claro
+                        borderColor: '#50fa7b', 
                         backgroundColor: 'rgba(80, 250, 123, 0.1)',
                         data: [],
                         borderWidth: 2,
@@ -126,23 +170,27 @@
                 scales: { x: { grid: { display: false } }, y: { grid: { color: '#3e3e42' } } }
             }
         });
+        toggleStatCards();
     };
 
     async function startSimulation() {
-        const exe = document.getElementById('exePath').value;
         const method = document.getElementById('method').value;
+        const exe = document.getElementById('exePath').value;
         const goal = document.getElementById('goal').value;
         const logDiv = document.getElementById('logs');
+        
+        toggleStatCards(); 
 
         // Resetar Visual
         chart.data.labels = [];
         chart.data.datasets[0].data = [];
         chart.data.datasets[1].data = [];
-        chart.data.datasets[2].data = []; // ⭐️ NOVO: Reset Simplex
+        chart.data.datasets[2].data = []; 
         
         document.getElementById('psoDisplay').innerText = '---';
         document.getElementById('gaDisplay').innerText = '---';
         document.getElementById('simplexDisplay').innerText = '---';
+        document.getElementById('combinedDisplay').innerText = '---'; // Reset do combinado
 
         chart.update();
         logDiv.innerHTML = "Iniciando conexão com o núcleo...<br>";
@@ -184,31 +232,60 @@
         document.getElementById('iterDisplay').innerText = data.iteracao;
         chart.data.labels.push(data.iteracao);
 
-        // Atualiza PSO (Dataset 0)
+        const isCombined = method === 'combined';
+        let combinedValue = null;
+
+        // Atualiza Dataset 0 (PSO / OU COMBINADO)
         if (data.pso_best !== undefined) {
             chart.data.datasets[0].data.push(data.pso_best);
-            document.getElementById('psoDisplay').innerText = data.pso_best.toFixed(4);
+            combinedValue = data.pso_best; // Em COMBINED, PSO_best é o valor final
+
+            // ⭐️ SÓ ATUALIZA O DISPLAY INDIVIDUAL SE NÃO FOR O MODO COMBINADA
+            if (!isCombined) {
+                document.getElementById('psoDisplay').innerText = data.pso_best !== null ? data.pso_best.toFixed(4) : '---';
+            }
         } else {
-            chart.data.datasets[0].data.push(null); // Buraco no gráfico se não rodou
+            chart.data.datasets[0].data.push(null); 
         }
 
-        // Atualiza GA (Dataset 1)
-        if (data.ga_best !== undefined) {
+        // Atualiza Dataset 1 (GA)
+        if (data.ga_best !== undefined && data.ga_best !== null) {
             chart.data.datasets[1].data.push(data.ga_best);
-            document.getElementById('gaDisplay').innerText = data.ga_best.toFixed(4);
+            // ⭐️ SÓ ATUALIZA O DISPLAY INDIVIDUAL SE NÃO FOR O MODO COMBINADA
+            if (!isCombined) {
+                document.getElementById('gaDisplay').innerText = data.ga_best.toFixed(4);
+            } else {
+                 document.getElementById('gaDisplay').innerText = '---'; // Limpa se for combinado
+            }
         } else {
             chart.data.datasets[1].data.push(null);
+            if (!isCombined) document.getElementById('gaDisplay').innerText = '---'; 
         }
 
-        // ⭐️ Atualiza Simplex (Dataset 2)
+        // Atualiza Dataset 2 (Simplex)
         if (data.simplex_best !== undefined) {
-            chart.data.datasets[2].data.push(data.simplex_best);
-            document.getElementById('simplexDisplay').innerText = data.simplex_best.toFixed(4);
+            chart.data.datasets[2].data.push(data.simplex_best); 
+            // ⭐️ SÓ ATUALIZA O DISPLAY INDIVIDUAL SE NÃO FOR O MODO COMBINADA
+            if (!isCombined) {
+                document.getElementById('simplexDisplay').innerText = data.simplex_best !== null ? data.simplex_best.toFixed(4) : '---';
+            } else {
+                document.getElementById('simplexDisplay').innerText = '---'; // Limpa se for combinado
+            }
         } else {
             chart.data.datasets[2].data.push(null);
+        }
+
+        // ⭐️ ATUALIZAÇÃO PRINCIPAL: Resultado Combinado (Sempre que houver valor)
+        if (isCombined && combinedValue !== null) {
+             document.getElementById('combinedDisplay').innerText = combinedValue.toFixed(4);
+             // Limpa o display individual do PSO se for modo combinado, caso ele tenha sido atualizado acima
+             document.getElementById('psoDisplay').innerText = '---'; 
+        } else if (isCombined) {
+            document.getElementById('combinedDisplay').innerText = '---';
         }
 
         chart.update();
     }
 </script>
 </body>
+</html>
