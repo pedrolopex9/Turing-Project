@@ -16,9 +16,10 @@ def log_debug(msg):
     clean_msg = msg.encode('ascii', 'ignore').decode('ascii')
     print(f"DEBUG: {clean_msg}", file=sys.stdout, flush=True)
 
+# ⭐️ ATUALIZAÇÃO DO ARGPARSE: Adiciona 'simplex' e 'battle' completo
 parser = argparse.ArgumentParser()
 parser.add_argument("--exe", required=True)
-parser.add_argument("--method", choices=["pso", "ga", "battle"], default="pso")
+parser.add_argument("--method", choices=["pso", "ga", "simplex", "battle"], default="pso")
 parser.add_argument("--dim", type=int, default=9)
 parser.add_argument("--pop", type=int, default=20)
 parser.add_argument("--iter", type=int, default=50)
@@ -40,6 +41,7 @@ log_debug(f"Config: {args.method}, Dim: {args.dim}")
 # --- EXECUÇÃO ---
 def run_blackbox(params):
     try:
+        # A função run_blackbox é idêntica à original
         cmd = [os.path.abspath(args.exe), "medio"] + [str(int(p)) for p in params]
         
         # Timeout curto para não travar a interface
@@ -62,6 +64,7 @@ def run_blackbox(params):
         return float('inf')
 
 # --- ALGORITMOS ---
+# --- PSO (EXISTENTE) ---
 def run_pso_step(particles, velocities, pbest, pbest_val, gbest, gbest_val):
     current_vals = []
     w, c1, c2 = 0.7, 1.4, 1.4
@@ -85,6 +88,7 @@ def run_pso_step(particles, velocities, pbest, pbest_val, gbest, gbest_val):
 
     return particles, velocities, pbest, pbest_val, gbest, gbest_val, np.mean(current_vals)
 
+# --- GA (EXISTENTE) ---
 def run_ga_step(population):
     fitnesses = []
     for ind in population:
@@ -119,8 +123,79 @@ def run_ga_step(population):
         
     return np.array(new_pop), best_ind, min_fit, np.mean(fitnesses)
 
+# ⭐️ NOVO ALGORITMO: SIMPLEX DE NELDER-MEAD
+def run_simplex_step(simplex_points):
+    # Simplex é um conjunto de N+1 pontos, onde N é args.dim
+    
+    # 1. Avalia o Simplex
+    fitnesses = [(p, run_blackbox(p)) for p in simplex_points]
+    
+    # 2. Ordena os pontos: melhor (low), penúltimo (next_high), pior (high)
+    fitnesses.sort(key=lambda x: x[1])
+    
+    p_low, f_low = fitnesses[0]
+    p_high, f_high = fitnesses[-1]
+    
+    # Se o melhor valor for infinito, ou primeira iteração, retorna inalterado
+    if f_low == float('inf'):
+        # Usamos o primeiro ponto para evitar erros no centroid
+        return simplex_points, float('inf'), float('inf') 
+
+    # 3. Calcula o centroide (exceto o pior ponto)
+    centroid = np.mean([p for p, f in fitnesses[:-1]], axis=0)
+    
+    # 4. Reflexão (alpha = 1.0)
+    p_reflect = centroid + 1.0 * (centroid - p_high)
+    p_reflect = np.clip(np.round(p_reflect), 1, 100)
+    f_reflect = run_blackbox(p_reflect)
+
+    # Verifica se a reflexão é melhor que o penúltimo, mas não o melhor
+    if f_low <= f_reflect < fitnesses[-2][1]: 
+        # Substitui o pior ponto pelo ponto refletido
+        new_simplex = [p for p, f in fitnesses[:-1]] + [p_reflect]
+        return np.array(new_simplex), f_low, np.mean([f for p, f in fitnesses])
+
+    elif f_reflect < f_low: # Reflexão é o novo melhor ponto -> Tenta Expansão
+        # 5. Expansão (gamma = 2.0)
+        p_expand = centroid + 2.0 * (centroid - p_high)
+        p_expand = np.clip(np.round(p_expand), 1, 100)
+        f_expand = run_blackbox(p_expand)
+
+        if f_expand < f_reflect:
+            new_simplex = [p for p, f in fitnesses[:-1]] + [p_expand]
+            return np.array(new_simplex), f_expand, np.mean([f for p, f in fitnesses])
+        else:
+            new_simplex = [p for p, f in fitnesses[:-1]] + [p_reflect]
+            return np.array(new_simplex), f_low, np.mean([f for p, f in fitnesses])
+
+    else: # f_reflect >= fitnesses[-2][1] -> Contração
+        
+        # 6. Contração (Beta = 0.5)
+        if f_reflect < f_high: # Contração Externa
+            p_contract = centroid + 0.5 * (p_reflect - centroid)
+        else: # Contração Interna (pior que o ponto mais alto, usa o ponto mais alto)
+            p_contract = centroid - 0.5 * (centroid - p_high)
+
+        p_contract = np.clip(np.round(p_contract), 1, 100)
+        f_contract = run_blackbox(p_contract)
+
+        if f_contract < min(f_reflect, f_high): # Aceita a contração
+            new_simplex = [p for p, f in fitnesses[:-1]] + [p_contract]
+            return np.array(new_simplex), f_low, np.mean([f for p, f in fitnesses])
+
+        # 7. Redução (Encolhimento)
+        # Nada melhorou, encolhe o simplex em direção ao melhor ponto (p_low)
+        new_simplex = [p_low]
+        for p, f in fitnesses[1:]:
+            p_new = p_low + 0.5 * (p - p_low)
+            new_simplex.append(np.clip(np.round(p_new), 1, 100))
+        
+        # O melhor ponto é mantido
+        return np.array(new_simplex), f_low, np.mean([f for p, f in fitnesses])
+
+
 def main():
-    # Setup Inicial
+    # Setup Inicial (PSO e GA)
     pso_parts = np.random.randint(1, 100, (args.pop, args.dim))
     pso_vel = np.zeros_like(pso_parts)
     pso_pbest = pso_parts.copy()
@@ -130,8 +205,12 @@ def main():
 
     ga_pop = np.random.randint(1, 100, (args.pop, args.dim))
     ga_best_val = float('inf')
+    
+    # ⭐️ Setup Simplex (N+1 pontos)
+    simplex_pop = np.random.randint(1, 100, (args.dim + 1, args.dim))
+    simplex_best_val = float('inf')
 
-    log_debug("Iniciando loop principal...") # Se chegar aqui, o problema de encoding foi resolvido
+    log_debug("Iniciando loop principal...")
 
     for i in range(args.iter):
         data_out = {"iteracao": i + 1}
@@ -152,6 +231,16 @@ def main():
             
             real_best_ga = ga_best_val if args.goal == "min" else -ga_best_val
             data_out["ga_best"] = real_best_ga if real_best_ga != float('inf') else 0
+
+        # ⭐️ Executa Simplex
+        if args.method in ["simplex", "battle"]:
+            simplex_pop, simplex_iter_best, simplex_mean = run_simplex_step(simplex_pop)
+            
+            if simplex_iter_best < simplex_best_val:
+                simplex_best_val = simplex_iter_best
+            
+            real_best_simplex = simplex_best_val if args.goal == "min" else -simplex_best_val
+            data_out["simplex_best"] = real_best_simplex if real_best_simplex != float('inf') else 0
 
         # Imprime JSON
         print(json.dumps(data_out), flush=True)
