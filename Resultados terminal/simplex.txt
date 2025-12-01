@@ -52,4 +52,5 @@
 [PYTHON]: {"iteracao": 48, "simplex_best": 686.91}
 [PYTHON]: {"iteracao": 49, "simplex_best": 686.91}
 [PYTHON]: {"iteracao": 50, "simplex_best": 686.91}
+
 [PYTHON]: DEBUG: Finalizado com sucesso.
