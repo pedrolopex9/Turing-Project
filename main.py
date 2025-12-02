@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Ferramenta de Ajuste de Parâmetros - Otimização Numérica e Textual
-Versão Modificada: Focada em performance e cache
-"""
-
 import subprocess
 import sys
 import time
@@ -1463,4 +1456,5 @@ def loop_principal():
             time.sleep(1)
 
 if __name__ == "__main__":
+
     loop_principal()
